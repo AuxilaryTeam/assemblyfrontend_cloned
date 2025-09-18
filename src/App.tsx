@@ -13,7 +13,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="assemblynah/" element={<Login />} />
         <Route element={<DashboardLayout />}>
           <Route path="/assemblynah/search" element={<Search />} />
           <Route path="/assemblynah/searchprint" element={<Searchprint />} />
