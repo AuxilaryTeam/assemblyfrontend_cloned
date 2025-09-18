@@ -23,7 +23,7 @@ const Print = () => {
   };
 
   const goBack = () => {
-    navigate("/assemblynah/search");
+    navigate(-1);
   };
 
   React.useEffect(() => {
@@ -52,7 +52,13 @@ const Print = () => {
               onClick={printDocument}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
             >
-              <FiPrinter /> Print Document
+              <FiPrinter /> Print Dividend
+            </button>
+            <button
+              onClick={()=>window.alert("Vote Paper ")}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            >
+              <FiPrinter /> Print Vote Paper
             </button>
           </div>
         </div>

@@ -5,6 +5,7 @@ import {
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
 } from "@heroicons/react/24/outline";
+import { useToast } from "@/hooks/use-toast";
 
 export interface Column {
   header: string;
@@ -27,6 +28,7 @@ interface GenericTableProps {
   showPagination?: boolean;
   sortable?: boolean;
   onSort?: (field: string, direction: "asc" | "desc") => void;
+  exportToExcel?: boolean;
 }
 
 const GenericTable: React.FC<GenericTableProps> = ({
@@ -41,11 +43,13 @@ const GenericTable: React.FC<GenericTableProps> = ({
   showPagination = true,
   sortable = false,
   onSort,
+  exportToExcel = false,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(defaultItemsPerPage);
   const [sortField, setSortField] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const { toast } = useToast();
 
   const totalPages = Math.ceil(data.length / itemsPerPage);
 
@@ -67,6 +71,51 @@ const GenericTable: React.FC<GenericTableProps> = ({
     setSortField(field);
     setSortDirection(newDirection);
     if (onSort) onSort(field, newDirection);
+  };
+
+  const exportData = () => {
+    if (data.length === 0) {
+      toast({
+        title: "Export Failed",
+        description: "No data to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Exporting Data",
+      description: "Preparing your file for download...",
+    });
+
+    const headers = columns.map((col) => col.header).join(",");
+    const rows = data.map((row) =>
+      columns.map((col) => {
+        const value = row[col.accessor];
+        // Ensure values with commas are properly quoted for CSV
+        return typeof value === "string" && value.includes(",")
+          ? `"${value}"`
+          : value;
+      }).join(",")
+    );
+
+    // Add a Byte Order Mark (BOM) to handle UTF-8 characters like Amharic names
+    const csvContent = "\uFEFF" + [headers, ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${title || "table_data"}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Complete",
+      description: "The file has been downloaded successfully.",
+    });
   };
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -108,28 +157,47 @@ const GenericTable: React.FC<GenericTableProps> = ({
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
       {/* Header */}
-      {(title || showPagination) && (
+      {(title || showPagination || exportToExcel) && (
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center px-6 py-4 border-b border-gray-200 gap-3">
           {title && (
             <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
           )}
 
-          {showPagination && data.length > 0 && (
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <span className="text-sm text-gray-600">Rows per page:</span>
-              <select
-                value={itemsPerPage}
-                onChange={handleItemsPerPageChange}
-                className="border border-gray-300 rounded px-6 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-yellow-500"
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            {exportToExcel && (
+              <button
+                onClick={exportData}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
               >
-                {itemsPerPageOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M20 6h-3V1H7v5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Zm-7-3h2v3h-2Zm-4 0h2v3H9ZM4 8h16v12H4Z" />
+                  <path d="M12 11h-2v2h2v-2Zm0 4h-2v2h2v-2Zm4-4h-2v2h2v-2Zm0 4h-2v2h2v-2Zm-8 0h-2v2h2v-2Zm4 0h-2v2h2v-2Zm0-4h-2v2h2v-2Z" />
+                </svg>
+                Export
+              </button>
+            )}
+            {showPagination && data.length > 0 && (
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <span className="text-sm text-gray-600">Rows per page:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={handleItemsPerPageChange}
+                  className="border border-gray-300 rounded px-6 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-yellow-500"
+                >
+                  {itemsPerPageOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

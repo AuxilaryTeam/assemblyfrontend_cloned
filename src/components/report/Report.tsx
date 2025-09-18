@@ -151,6 +151,7 @@ const Report = () => {
           defaultItemsPerPage={10}
           itemsPerPageOptions={[5, 10, 20]}
           showPagination
+          exportToExcel={true}
         />
       </Card>
     </div>

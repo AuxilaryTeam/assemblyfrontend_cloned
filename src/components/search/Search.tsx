@@ -14,8 +14,8 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-  DialogOverlay,
 } from "@/components/ui/dialog";
+import { FiAlertTriangle, FiCheckCircle } from "react-icons/fi";
 
 interface Shareholder {
   id: number;
@@ -39,72 +39,134 @@ const Search = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedShareholder, setSelectedShareholder] =
-    useState<Shareholder | null>(null);
+  const [selectedShareholder, setSelectedShareholder] = useState<Shareholder | null>(null);
   const [isMarking, setIsMarking] = useState(true);
-
-  const token = localStorage.getItem("token");
-  const apiBase = import.meta.env.VITE_API_BASE_URL;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async (type: "name" | "phone" | "shareid") => {
-    setResult([]);
-    setError(null);
-    setLoading(true);
-    try {
-      let response;
-      if (type === "phone") {
-        response = await axios.get(
-          `${apiBase}admin/phone/${encodeURIComponent(search)}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else if (type === "name") {
-        response = await axios.get(
-          `${apiBase}admin/name/${encodeURIComponent(search)}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else {
-        response = await axios.get(
-          `${apiBase}admin/shareid/${encodeURIComponent(search)}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      }
-
-      const data: Shareholder[] = Array.isArray(response.data)
-        ? response.data
-        : [response.data];
-
-      if (data.length === 0) {
-        setError("No results found");
-        toast({ title: "No results found", variant: "destructive" });
-      } else {
-        toast({ title: `Found ${data.length} result(s)`, variant: "success" });
-      }
-
-      setResult(data);
-      setCurrentPage(1);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Network error");
-      toast({ title: "Error fetching data", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+  // Check if token is valid (not HTML content)
+  const isValidToken = (token: string | null): boolean => {
+    if (!token) return false;
+    // Check if token contains HTML (indicating an expired/invalid session)
+    return !token.includes("<!DOCTYPE html") && !token.includes("<html");
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!search.trim()) {
-      toast({ title: "Please enter a search term", variant: "destructive" });
+  const getAuthToken = (): string | null => {
+    const token = localStorage.getItem("token");
+    if (!isValidToken(token)) {
+      // Clear invalid token
+      localStorage.removeItem("token");
+      // Show error and redirect to login
+      toast({
+        variant: "destructive",
+        title: (
+          <div className="flex items-center gap-2">
+            <FiAlertTriangle className="h-4 w-4" />
+            <span>Session Expired</span>
+          </div>
+        ),
+        description: "Your session has expired. Please login again.",
+        duration: 4000,
+      });
+      
+      // Redirect to login with toast flag
+      setTimeout(() => {
+        navigate("/assemblynah/", { 
+          replace: true, 
+          state: { showToast: true } 
+        });
+      }, 1000);
+      
+      return null;
+    }
+    return token;
+  };
+
+// Corrected fetchData function
+const fetchData = async (type: "name" | "phone" | "shareid", query: string) => {
+  setResult([]);
+  setError(null);
+  setLoading(true);
+
+  const token = getAuthToken();
+  if (!token) {
+    setLoading(false);
+    return;
+  }
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL;
+
+  try {
+    let response;
+    if (type === "phone") {
+      response = await axios.get(
+        `${apiBase}admin/phone/${encodeURIComponent(query)}`, // Use the `query` argument
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000,
+        }
+      );
+    } else if (type === "name") {
+      response = await axios.get(
+        `${apiBase}admin/name/${encodeURIComponent(query)}`, // Use the `query` argument
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000,
+        }
+      );
+    } else {
+      response = await axios.get(
+        `${apiBase}admin/shareid/${encodeURIComponent(query)}`, // Use the `query` argument
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000,
+        }
+      );
+    }
+
+    const data: Shareholder[] = Array.isArray(response.data) ? response.data : [response.data];
+
+    if (data.length === 0) {
+      setError("No results found for your search");
+      toast({
+        title: "No results found",
+        variant: "default",
+        description: "Please try a different search term."
+      });
+    } else {
+      toast({
+        title: `Found ${data.length} result(s)`,
+        variant: "success",
+        description: "Search completed successfully."
+      });
+    }
+
+    setResult(data);
+    setCurrentPage(1);
+  } catch (err: any) {
+    console.error("API Error:", err);
+    // ... rest of your error handling
+  } finally {
+    setLoading(false);
+  }
+};
+  
+
+  const handleSearch = (query: string) => {
+    setSearch(query);
+    if (!query.trim()) {
+      setError("Please enter a search term");
       return;
     }
-    if (search.startsWith("9")) fetchData("phone");
-    else if (isNaN(Number(search))) fetchData("name");
-    else fetchData("shareid");
+    setError(null);
+  
+    // Use the query argument directly here, not the `search` state
+    if (query.startsWith("9")) fetchData("phone", query);
+    else if (isNaN(Number(query))) fetchData("name", query);
+    else fetchData("shareid", query);
   };
-
+  
   const handleRowClick = (person: Shareholder) => {
     if (person.votingsubscription > 0 && person.sharesubsription > 0) {
       navigate("/assemblynah/print", { state: { person } });
@@ -119,12 +181,24 @@ const Search = () => {
 
   const handleConfirmAttendance = async () => {
     if (!selectedShareholder) return;
+    
+    const token = getAuthToken();
+    if (!token) {
+      setModalOpen(false);
+      return;
+    }
+    
     const now = new Date().toLocaleString();
+    const apiBase = import.meta.env.VITE_API_BASE_URL;
+    
     try {
       await axios.post(
         `${apiBase}admin/attendance0/${selectedShareholder.id}`,
         { attendance: isMarking ? 1 : 0 },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000
+        }
       );
 
       setResult((prev) =>
@@ -144,6 +218,9 @@ const Search = () => {
       toast({
         title: `Attendance ${isMarking ? "marked" : "unmarked"} successfully!`,
         variant: "success",
+        description: isMarking ? 
+          "The shareholder's attendance has been recorded." : 
+          "The shareholder's attendance has been removed."
       });
 
       if (isMarking) {
@@ -158,8 +235,12 @@ const Search = () => {
         });
       }
     } catch (error) {
-      console.error(error);
-      toast({ title: "Error updating attendance", variant: "destructive" });
+      console.error("Attendance Error:", error);
+      toast({ 
+        title: "Error updating attendance", 
+        variant: "destructive",
+        description: "Please try again or contact support."
+      });
     }
   };
 
@@ -218,6 +299,7 @@ const Search = () => {
         <Checkbox
           checked={value === 1}
           onCheckedChange={() => handleAttendanceClick(row)}
+          disabled={loading}
         />
       ),
     },
@@ -238,17 +320,7 @@ const Search = () => {
       <SearchCard
         label="Search For Attendance"
         placeholder="Enter ID, Name, or Phone"
-        onSearch={(query) => {
-          setSearch(query);
-          if (!query.trim()) {
-            setError("Please enter a search term");
-            return;
-          }
-          setError(null);
-          if (query.startsWith("9")) fetchData("phone");
-          else if (isNaN(Number(query))) fetchData("name");
-          else fetchData("shareid");
-        }}
+        onSearch={handleSearch}
         loading={loading}
         error={error}
       />
@@ -270,11 +342,20 @@ const Search = () => {
       )}
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogOverlay style={{ backgroundColor: "#F4AC15", opacity: 0.2 }} />
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-white">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold">
-              {isMarking ? "Mark Attendance?" : "Unmark Attendance?"}
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              {isMarking ? (
+                <>
+                  <FiCheckCircle className="text-green-500" />
+                  Mark Attendance?
+                </>
+              ) : (
+                <>
+                  <FiAlertTriangle className="text-amber-500" />
+                  Unmark Attendance?
+                </>
+              )}
             </DialogTitle>
             <DialogDescription className="mt-1 text-sm text-gray-700">
               Confirm attendance action for:
@@ -303,8 +384,9 @@ const Search = () => {
               Cancel
             </Button>
             <Button
-              className="bg-brand-yellow hover:bg-yellow-500 text-black"
+              className="bg-amber-500 hover:bg-amber-600 text-white"
               onClick={handleConfirmAttendance}
+              disabled={loading}
             >
               {isMarking ? "Mark & Print" : "Unmark"}
             </Button>

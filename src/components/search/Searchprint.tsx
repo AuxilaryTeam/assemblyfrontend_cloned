@@ -80,7 +80,7 @@ const SearchPrint = () => {
   };
 
   const handleRowClick = (s: Shareholder) => {
-    navigate("/assemblynah/justprint", { state: { person: s } });
+    navigate("/assemblynah/print", { state: { person: s } });
   };
 
   const columns: Column[] = [

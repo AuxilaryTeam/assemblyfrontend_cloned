@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate, Outlet, NavLink } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  FiSearch,
   FiPrinter,
   FiFileText,
   FiMonitor,
@@ -12,6 +11,7 @@ import {
   FiMenu,
   FiCheckSquare,
   FiClipboard,
+  FiX,
 } from "react-icons/fi";
 import { BsCardChecklist } from "react-icons/bs";
 
@@ -20,59 +20,54 @@ import { Button } from "@/components/ui/button";
 import logo from "@/assets/Logo.png";
 import slogan from "@/assets/logo2.jpg";
 import collapsedLogo from "@/assets/logo-collapsed.ico";
+import { CheckCircle, ShieldAlert } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 const navItems = [
-  {
-    name: "Attendance",
-    icon: <FiClipboard />, // better for attendance tracking
-    path: "/assemblynah/search",
-  },
-  {
-    name: "Printing Search",
-    icon: <FiPrinter />, // printing-related icon
-    path: "/assemblynah/searchprint",
-  },
-  {
-    name: "Report",
-    icon: <FiFileText />, // keeps reporting semantic
-    path: "/assemblynah/report",
-  },
-  {
-    name: "Display",
-    icon: <FiMonitor />, // monitor display
-    path: "/assemblynah/display",
-  },
-  {
-    name: "Display Print",
-    icon: <BsCardChecklist />, // checklist style, represents display print better
-    path: "/assemblynah/displayprint",
-  },
-  {
-    name: "Voting Screen",
-    icon: <FiCheckSquare />, // visually shows voting/selection
-    path: "/assemblynah/voting",
-  },
+  { name: "Attendance", icon: <FiClipboard />, path: "/assemblynah/search" },
+  { name: "Print Attendance", icon: <FiPrinter />, path: "/assemblynah/searchprint" },
+  { name: "Report", icon: <FiFileText />, path: "/assemblynah/report" },
+  { name: "Display", icon: <FiMonitor />, path: "/assemblynah/display" },
+  { name: "Print Display ", icon: <BsCardChecklist />, path: "/assemblynah/displayprint" },
+  { name: "Voting Screen", icon: <FiCheckSquare />, path: "/assemblynah/voting" },
 ];
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
-  const [sidebarState, setSidebarState] = useState<
-    "expanded" | "collapsed" | "hidden"
-  >("expanded");
+  const [sidebarState, setSidebarState] = useState("expanded");
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/");
+    try {
+      localStorage.removeItem("token");
+      toast({
+        variant: "success",
+        title: (
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5" />
+            <span>Logged out successfully</span>
+          </div>
+        ),
+        description: "You have been logged out.",
+        duration: 3000,
+      });
+      navigate("/assemblynah");
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: (
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5" />
+            <span>Logout Failed</span>
+          </div>
+        ),
+        description: "Something went wrong while logging out.",
+        duration: 4000,
+      });
+    }
   };
 
-  const toggleSidebar = () => {
-    if (sidebarState === "expanded") {
-      setSidebarState("collapsed");
-    } else if (sidebarState === "collapsed") {
-      setSidebarState("hidden");
-    } else {
-      setSidebarState("expanded");
-    }
+  const hideSidebar = () => {
+    setSidebarState("hidden");
   };
 
   const expandSidebar = () => {
@@ -94,19 +89,33 @@ const DashboardLayout = () => {
             className="hidden md:flex flex-col bg-white shadow-xl border-r border-gray-200 print:hidden"
           >
             <div className="flex flex-col h-full">
+              
               {/* Sidebar header with collapse controls */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200">
                 {sidebarState === "expanded" ? (
-                  <img src={logo} alt="Logo" className="h-14 w-auto" />
+                  <div className="flex flex-row items-left justify-around w-full">
+                    <img src={logo} alt="Logo" className="h-14 w-auto" />
+                    <button
+                      onClick={() => setSidebarState("collapsed")}
+                      className="text-gray-700 p-1 hover:bg-gray-200 rounded"
+                      title="Expand"
+                    >
+                      <FiChevronLeft size={28} />
+                    </button>
+                  </div>
                 ) : (
-                  <div className="flex flex-col items-center w-full">
+                  
+                  <div className="flex flex-col items-center w-full"> {sidebarState === "hidden" && (
+                    <div className="flex flex-row items-left justify-around w-full"> 
+                                <img src={logo} alt="Logo" className="h-14 w-auto" />
+                    </div>
+                  )}
                     <img
                       src={collapsedLogo}
                       alt="Logo"
                       className="h-10 w-auto mx-auto mb-2"
                     />
                     <div className="flex gap-1">
-                      {/* FiMenu to expand */}
                       <button
                         onClick={() => setSidebarState("expanded")}
                         className="text-gray-700 p-1 hover:bg-gray-200 rounded"
@@ -117,29 +126,53 @@ const DashboardLayout = () => {
                     </div>
                   </div>
                 )}
+                
               </div>
 
               {/* Navigation items */}
               <nav className="flex-1 overflow-y-auto mt-6 px-2 space-y-2">
-                {navItems.map((item) => (
-                  <NavLink
-                    key={item.name}
-                    to={item.path}
-                    className={({ isActive }) =>
-                      `flex items-center p-4 text-base font-semibold rounded-lg transition-colors hover:bg-amber-100 hover:text-amber-700 ${
-                        isActive
-                          ? "bg-amber-50 text-custom-yellow shadow-inner"
-                          : "text-gray-700"
-                      } ${sidebarState === "collapsed" ? "justify-center" : ""}`
-                    }
-                    title={sidebarState === "collapsed" ? item.name : ""}
-                  >
-                    <span className="text-xl">{item.icon}</span>
-                    {sidebarState === "expanded" && (
-                      <span className="ml-3">{item.name}</span>
-                    )}
-                  </NavLink>
-                ))}
+              
+                {navItems.map((item) => {
+                  const commonClasses = `flex items-center p-4 text-base font-semibold rounded-lg transition-colors hover:bg-amber-100 hover:text-amber-700 ${
+                    sidebarState === "collapsed" ? "justify-center" : ""
+                  }`;
+                  const activeClasses = "bg-amber-50 text-custom-yellow shadow-inner";
+                  const inactiveClasses = "text-gray-700";
+
+                  if (item.path === "/assemblynah/display") {
+                    return (
+                      <a
+                        key={item.name}
+                        href={item.path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`${commonClasses} ${inactiveClasses}`}
+                        title={sidebarState === "collapsed" ? item.name : ""}
+                      >
+                        <span className="text-xl">{item.icon}</span>
+                        {sidebarState === "expanded" && (
+                          <span className="ml-3">{item.name}</span>
+                        )}
+                      </a>
+                    );
+                  }
+
+                  return (
+                    <NavLink
+                      key={item.name}
+                      to={item.path}
+                      className={({ isActive }) =>
+                        `${commonClasses} ${isActive ? activeClasses : inactiveClasses}`
+                      }
+                      title={sidebarState === "collapsed" ? item.name : ""}
+                    >
+                      <span className="text-xl">{item.icon}</span>
+                      {sidebarState === "expanded" && (
+                        <span className="ml-3">{item.name}</span>
+                      )}
+                    </NavLink>
+                  );
+                })}
               </nav>
 
               {/* Logout button at bottom */}
@@ -162,9 +195,8 @@ const DashboardLayout = () => {
           </motion.aside>
         )}
       </AnimatePresence>
-
-      {/* Expand Button (Visible when sidebar is hidden) */}
-      {sidebarState === "hidden" && (
+   {/* Expand Button (Visible when sidebar is hidden) */}
+   {sidebarState === "hidden" && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -180,55 +212,34 @@ const DashboardLayout = () => {
           </Button>
         </motion.div>
       )}
-
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-white shadow-md flex items-center justify-between p-6 print:hidden">
-          {/* Left side: menu toggle + dynamic header content */}
+          {/* Left side: menu toggle */}
           <div className="flex items-center gap-4">
-            {/* Sidebar toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              className="h-18 " // was 8
-            >
-              {sidebarState === "hidden" ? (
-                <FiMenu size={28} />
-              ) : (
-                <FiChevronLeft size={28} />
-              )}
-            </Button>
-
-            {/* Dynamic header content */}
             {sidebarState === "hidden" ? (
-              <div className="flex items-center gap-2">
-                <img src={logo} alt="Logo" className="h-14 w-auto" />
-                <span className="font-semibold text-lg text-gray-800 pl-6">
-                  Assembly Dashboard
-                </span>
+              <div className="flex flex-row items-center w-full">
+              
+                <img src={logo} alt="Logo" className="h-14 w-auto ml-4" />
               </div>
-            ) : sidebarState === "collapsed" ? (
-              <h1 className="text-xl font-bold text-gray-800 hidden md:block">
-                Welcome to Assembly Dashboard
-              </h1>
             ) : (
-              <h1 className="text-xl font-bold text-gray-800 hidden md:block">
-                Welcome to Assembly Dashboard
-              </h1>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={hideSidebar}
+                className="text-gray-700 p-1 hover:bg-gray-200 rounded"
+                title="Hide Sidebar"
+              >
+              
+                <FiX size={38} />
+              </Button>
             )}
           </div>
 
-          {/* Right side: slogan or nothing */}
+          {/* Right side: slogan or logo */}
           <div className="flex items-center gap-2">
-            {sidebarState === "expanded" ? (
-              <img src={slogan} alt="Slogan" className="h-10 w-auto" />
-            ) : sidebarState === "collapsed" ? (
-              <img src={logo} alt="Slogan" className="h-10 w-auto" />
-            ) : (
-              <img src={slogan} alt="Slogan" className="h-10 w-auto" />
-            )}
+            <img src={slogan} alt="Brand Slogan" className="h-10 w-auto" />
           </div>
         </header>
 

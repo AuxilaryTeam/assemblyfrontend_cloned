@@ -1,137 +1,197 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { FiCheckCircle, FiXCircle } from "react-icons/fi";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import axios from "axios";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  ShieldAlert, 
+  CheckCircle, 
+  LogIn, 
+  Eye, 
+  EyeOff, 
+  User, 
+  Lock,
+  Loader2
+} from "lucide-react";
 
 const Login = () => {
+  const location = useLocation();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    const state = location.state as { showToast?: boolean };
+  
+    if (state?.showToast) {
+      toast({
+        variant: "destructive",
+        title: (
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5" />
+            <span>Access Denied</span>
+          </div>
+        ),
+        description: "Please login to access this page.",
+        duration: 4000,
+      });
+  
+      // Clear state so toast doesn't show again on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, toast, navigate]);
+  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
+  
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}authenticate`,
-        { username, password }
+        { username, password },
+        {
+          validateStatus: () => true, // Let us manually check status
+        }
       );
-
-      // Save token
+  
+      if (
+        typeof response.data !== "string" ||
+        response.data.includes("<!DOCTYPE html") ||
+        response.status !== 200
+      ) {
+        throw new Error("Invalid response from server");
+      }
+  
       localStorage.setItem("token", response.data);
-
-      toast.success("Login successful!", {
-        icon: <FiCheckCircle />,
-        autoClose: 2000,
-        position: "top-center",
-        theme: "colored",
+  
+      toast({
+        variant: "success",
+        title: (
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5" />
+            <span>Login Successful</span>
+          </div>
+        ),
+        description: "Redirecting to dashboard...",
+        duration: 2000,
       });
-
+  
       setTimeout(() => navigate("/assemblynah/search"), 2000);
     } catch (err) {
-      console.error("Login error:", err);
-      toast.error("Invalid username or password", {
-        icon: <FiXCircle />,
-        autoClose: 3000,
-        position: "top-center",
-        theme: "colored",
+      toast({
+        variant: "destructive",
+        title: (
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5" />
+            <span>Login Failed</span>
+          </div>
+        ),
+        description:
+          "Invalid username or password, or server error. Please try again.",
+        duration: 4000,
       });
     } finally {
       setLoading(false);
     }
   };
-
+  
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <ToastContainer />
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-lg border border-gray-200">
-        {/* Title */}
-        <h1 className="text-3xl font-semibold text-center text-gray-800">
-          Assembly Login
-        </h1>
-        <p className="text-sm text-center text-gray-500">
-          Please enter your credentials to continue
-        </p>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-amber-50 to-amber-100 p-4">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-xl border border-amber-200">
+        {/* Header */}
+        <div className="text-center space-y-2">
+        
+          <h1 className="text-3xl font-bold text-gray-900">Assembly Login</h1>
+          <p className="text-gray-500">Enter your credentials to continue</p>
+        </div>
 
-        {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-5">
-          {/* Username */}
-          <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium text-gray-700"
-            >
+        <form onSubmit={handleLogin} className="space-y-6">
+          {/* Username Field */}
+          <div className="space-y-2">
+            <label htmlFor="username" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+              <User className="w-4 h-4" />
               Username
             </label>
-            <input
-              type="text"
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 block w-full px-4 py-2 text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-yellow focus:border-custom-yellow bg-gray-50"
-              required
-              autoFocus
-            />
+            <div className="relative">
+              <input
+                type="text"
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-gray-50 transition-colors"
+                placeholder="Enter your username"
+                required
+                autoFocus
+                disabled={loading}
+              />
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            </div>
           </div>
 
-          {/* Password */}
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
+          {/* Password Field */}
+          <div className="space-y-2">
+            <label htmlFor="password" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+              <Lock className="w-4 h-4" />
               Password
             </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-4 py-2 text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-yellow focus:border-custom-yellow bg-gray-50"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-12 py-3 text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-gray-50 transition-colors"
+                placeholder="Enter your password"
+                required
+                disabled={loading}
+              />
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                disabled={loading}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className={`w-full flex justify-center items-center gap-2 px-4 py-2 text-base font-medium text-white rounded-lg transition-colors ${
+            className={`w-full flex justify-center items-center gap-2 px-6 py-3 text-base font-medium text-white rounded-lg transition-all ${
               loading
-                ? "bg-amber-300 cursor-not-allowed"
-                : "bg-custom-yellow hover:bg-amber-500"
+                ? "bg-amber-400 cursor-not-allowed"
+                : "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-md hover:shadow-lg"
             }`}
           >
             {loading ? (
-              <svg
-                className="w-5 h-5 animate-spin text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8H4z"
-                />
-              </svg>
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Logging in...</span>
+              </>
             ) : (
-              "Login"
+              <>
+                <LogIn className="w-5 h-5" />
+                <span>Login</span>
+              </>
             )}
           </button>
         </form>
+
+        {/* Footer Note */}
+        <p className="text-xs text-center text-gray-500 pt-4 border-t border-gray-200">
+          Secure authentication system for assembly operations
+        </p>
       </div>
     </div>
   );

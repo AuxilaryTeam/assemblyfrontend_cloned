@@ -13,6 +13,7 @@ const DisplayPrint = () => {
   const [lastUpdated, setLastUpdated] = useState("");
   const token = localStorage.getItem("token");
   const { toast } = useToast();
+
   const fetchAttendanceCount = useCallback(async () => {
     try {
       const response = await axios.get(
@@ -112,20 +113,20 @@ const DisplayPrint = () => {
   const printDocument = () => {
     toast({
       title: "Preparing Document",
-      description:
-        "The official meeting document is being prepared for printing",
+      description: "The official meeting document is being prepared for printing",
     });
 
     setTimeout(() => {
       window.print();
     }, 300);
   };
+  
   useEffect(() => {
     fetchData();
 
     const interval = setInterval(() => {
       fetchData();
-    }, 45 * 60 * 1000); // 45 minutes
+    }, 15000); // 15 seconds
 
     return () => clearInterval(interval);
   }, [fetchData]);
@@ -135,7 +136,6 @@ const DisplayPrint = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8">
-      {/* Control Panel (Hidden when printing) */}
       {/* Control Panel (Hidden when printing) */}
       <div className="print:hidden mb-6 bg-white p-4 rounded-lg shadow-md">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -167,7 +167,7 @@ const DisplayPrint = () => {
       </div>
 
       {/* Printable Document */}
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto border-2 border-gray-300 print:border-0 print:shadow-none">
+      <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto border-2 border-gray-300 print:border-0 print:shadow-none">
         {/* Bank Letterhead */}
         <div className="flex justify-between items-center mb-8 border-b-2 border-gray-300 pb-6">
           <div className="flex items-center">
@@ -177,14 +177,14 @@ const DisplayPrint = () => {
               className="h-16 w-auto mr-4"
             />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">አቢሲኒያ ባንክ</h1>
-              <p className="text-lg text-gray-700">የባለአክሲዮኖች ጉባኤ</p>
+              <h1 className="text-xl font-bold text-gray-900">አቢሲኒያ ባንክ</h1>
+              <p className="text-md text-gray-700">የባለአክሲዮኖች ጉባኤ</p>
             </div>
           </div>
           <img
             src={slogan}
             alt="Bank of Abyssinia Slogan"
-            className="h-12 w-auto"
+            className="h-10 w-auto"
           />
         </div>
 
@@ -210,61 +210,48 @@ const DisplayPrint = () => {
           </div>
         </div>
 
-        {/* Official Statistics */}
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 text-center border-b pb-2">
-            አጠቃላይ የተገኙ አባላት እና የድምጽ ስታቲስቲክስ
-          </h2>
+        {/* Official Statistics in the new card-like layout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Attendance Count Metric */}
+          <div className="p-4 rounded-lg border border-gray-200 shadow-sm overflow-hidden text-center">
+            <p className="text-base font-bold text-gray-700 mb-2">
+              ለስብሰባ የተገኙ የባለአክሲዮኖች ብዛት
+            </p>
+            <p className="text-3xl font-bold text-gray-900 leading-none">
+              {Intl.NumberFormat("en-US").format(attendanceCount)}
+            </p>
+          </div>
 
-          <div className="space-y-6">
-            {/* Attendance Count */}
-            <div className="flex justify-between items-center py-3 border-b">
-              <p className="text-lg font-semibold text-gray-800">
-                ለስብሰባ የተገኙ የባለአክሲዮኖች ብዛት:
-              </p>
-              <p className="text-2xl font-bold text-blue-900">
-                {Intl.NumberFormat("en-US").format(attendanceCount)}
-              </p>
-            </div>
+          {/* Subscribed Shares Metric */}
+          <div className="p-4 rounded-lg border border-gray-200 shadow-sm overflow-hidden text-center">
+            <p className="text-base font-bold text-gray-700 mb-2">
+              አጠቃላይ የተፈረመ አክሲዮን ካፒታል
+            </p>
+            <p className="text-3xl font-bold text-gray-900 leading-none">
+              {Intl.NumberFormat("en-US").format(sharesSum)}
+            </p>
+          </div>
 
-            {/* Voting Shares Present */}
-            <div className="flex justify-between items-center py-3 border-b">
-              <p className="text-lg font-semibold text-gray-800">
-                ለስብሰባ የተገኙ የባለአክሲዮኖች የተፈረመ አክሲዮን መጠን (በቁጥር):
-              </p>
-              <p className="text-2xl font-bold text-blue-900">
-                {Intl.NumberFormat("en-US").format(sumvoting)}
-              </p>
-            </div>
+          {/* Attended Subscribed Shares Metric */}
+          <div className="p-4 rounded-lg border border-gray-200 shadow-sm overflow-hidden text-center">
+            <p className="text-base font-bold text-gray-700 mb-2">
+              የተገኙ አክሲዮኖች (በቁጥር)
+            </p>
+            <p className="text-3xl font-bold text-gray-900 leading-none">
+              {Intl.NumberFormat("en-US").format(sumvoting)}
+            </p>
+          </div>
 
-            {/* Total Subscribed Capital */}
-            <div className="flex justify-between items-center py-3 border-b">
-              <p className="text-lg font-semibold text-gray-800">
-                አጠቃላይ የባንኩ የተፈረመ አክሲዮን ካፒታል (በቁጥር):
-              </p>
-              <p className="text-2xl font-bold text-blue-900">
-                {Intl.NumberFormat("en-US").format(sharesSum)}
-              </p>
-            </div>
-
-            {/* Percentage Representation */}
-            <div className="flex justify-between items-center py-3 border-b">
-              <p className="text-lg font-semibold text-gray-800">
-                ለስብሰባ የተገኙ የባለአክሲዮኖች የተፈረመ አክሲዮን መጠን (በ%):
-              </p>
-              <p className="text-2xl font-bold text-blue-900">{percentage}%</p>
-            </div>
+          {/* Percentage Metric */}
+          <div className="p-4 rounded-lg border border-gray-200 shadow-sm overflow-hidden text-center">
+            <p className="text-base font-bold text-gray-700 mb-2">
+              የተገኙ አክሲዮኖች (%)
+            </p>
+            <p className="text-3xl font-bold text-gray-900 leading-none">
+              {percentage}%
+            </p>
           </div>
         </div>
-
-        {/* QUORUM VERIFICATION - Commented but not removed as requested */}
-        {/* <div className="mb-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <h3 className="text-lg font-bold text-blue-900 mb-2">QUORUM VERIFICATION</h3>
-          <p className="text-blue-800">
-            This confirms that the assembly has achieved the required quorum as per the bank's bylaws 
-            and regulations. The meeting is duly constituted and may proceed with its agenda.
-          </p>
-        </div> */}
 
         {/* Signatures Section */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
