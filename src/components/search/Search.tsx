@@ -34,30 +34,19 @@ interface Shareholder {
 
 const Search = () => {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
   const [result, setResult] = useState<Shareholder[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedShareholder, setSelectedShareholder] = useState<Shareholder | null>(null);
+  const [selectedShareholder, setSelectedShareholder] =
+    useState<Shareholder | null>(null);
   const [isMarking, setIsMarking] = useState(true);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check if token is valid (not HTML content)
-  const isValidToken = (token: string | null): boolean => {
-    if (!token) return false;
-    // Check if token contains HTML (indicating an expired/invalid session)
-    return !token.includes("<!DOCTYPE html") && !token.includes("<html");
-  };
-
   const getAuthToken = (): string | null => {
     const token = localStorage.getItem("token");
-    if (!isValidToken(token)) {
-      // Clear invalid token
+    if (!token || token.includes("<!DOCTYPE html") || token.includes("<html")) {
       localStorage.removeItem("token");
-      // Show error and redirect to login
       toast({
         variant: "destructive",
         title: (
@@ -69,108 +58,83 @@ const Search = () => {
         description: "Your session has expired. Please login again.",
         duration: 4000,
       });
-      
-      // Redirect to login with toast flag
       setTimeout(() => {
-        navigate("/assemblynah/", { 
-          replace: true, 
-          state: { showToast: true } 
+        navigate("/assemblynah/", {
+          replace: true,
+          state: { showToast: true },
         });
       }, 1000);
-      
       return null;
     }
     return token;
   };
 
-// Corrected fetchData function
-const fetchData = async (type: "name" | "phone" | "shareid", query: string) => {
-  setResult([]);
-  setError(null);
-  setLoading(true);
+  const fetchData = async (
+    type: "name" | "phone" | "shareid",
+    query: string
+  ) => {
+    setResult([]);
+    setError(null);
+    setLoading(true);
 
-  const token = getAuthToken();
-  if (!token) {
-    setLoading(false);
-    return;
-  }
-
-  const apiBase = import.meta.env.VITE_API_BASE_URL;
-
-  try {
-    let response;
-    if (type === "phone") {
-      response = await axios.get(
-        `${apiBase}admin/phone/${encodeURIComponent(query)}`, // Use the `query` argument
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000,
-        }
-      );
-    } else if (type === "name") {
-      response = await axios.get(
-        `${apiBase}admin/name/${encodeURIComponent(query)}`, // Use the `query` argument
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000,
-        }
-      );
-    } else {
-      response = await axios.get(
-        `${apiBase}admin/shareid/${encodeURIComponent(query)}`, // Use the `query` argument
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000,
-        }
-      );
+    const token = getAuthToken();
+    if (!token) {
+      setLoading(false);
+      return;
     }
 
-    const data: Shareholder[] = Array.isArray(response.data) ? response.data : [response.data];
+    const apiBase = import.meta.env.VITE_API_BASE_URL;
 
-    if (data.length === 0) {
-      setError("No results found for your search");
+    try {
+      const response = await axios.get(
+        `${apiBase}admin/${type}/${encodeURIComponent(query)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000,
+        }
+      );
+
+      const data: Shareholder[] = Array.isArray(response.data)
+        ? response.data
+        : [response.data];
+
+      if (data.length === 0) {
+        setError("No results found for your search");
+        toast({
+          title: "No results found",
+          variant: "default",
+          description: "Please try a different search term.",
+        });
+      } else {
+        toast({
+          title: `Found ${data.length} result(s)`,
+          variant: "success",
+          description: "Search completed successfully.",
+        });
+      }
+      setResult(data);
+    } catch (err: any) {
+      console.error("API Error:", err);
       toast({
-        title: "No results found",
-        variant: "default",
-        description: "Please try a different search term."
+        title: "Search Error",
+        variant: "destructive",
+        description: "An error occurred while fetching data. Please try again.",
       });
-    } else {
-      toast({
-        title: `Found ${data.length} result(s)`,
-        variant: "success",
-        description: "Search completed successfully."
-      });
+    } finally {
+      setLoading(false);
     }
-
-    setResult(data);
-    setCurrentPage(1);
-  } catch (err: any) {
-    console.error("API Error:", err);
-    // ... rest of your error handling
-  } finally {
-    setLoading(false);
-  }
-};
-  
+  };
 
   const handleSearch = (query: string) => {
-    setSearch(query);
     if (!query.trim()) {
       setError("Please enter a search term");
       return;
     }
     setError(null);
-  
-    // Use the query argument directly here, not the `search` state
+
     if (query.startsWith("9")) fetchData("phone", query);
     else if (isNaN(Number(query))) fetchData("name", query);
     else fetchData("shareid", query);
-  };
-  
-  const handleRowClick = (person: Shareholder) => {
-    if (person.votingsubscription > 0 && person.sharesubsription > 0) {
-      navigate("/assemblynah/print", { state: { person } });
-    }
   };
 
   const handleAttendanceClick = (shareholder: Shareholder) => {
@@ -181,23 +145,23 @@ const fetchData = async (type: "name" | "phone" | "shareid", query: string) => {
 
   const handleConfirmAttendance = async () => {
     if (!selectedShareholder) return;
-    
+
     const token = getAuthToken();
     if (!token) {
       setModalOpen(false);
       return;
     }
-    
+
     const now = new Date().toLocaleString();
     const apiBase = import.meta.env.VITE_API_BASE_URL;
-    
+
     try {
       await axios.post(
         `${apiBase}admin/attendance0/${selectedShareholder.id}`,
         { attendance: isMarking ? 1 : 0 },
-        { 
+        {
           headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000
+          timeout: 10000,
         }
       );
 
@@ -218,9 +182,9 @@ const fetchData = async (type: "name" | "phone" | "shareid", query: string) => {
       toast({
         title: `Attendance ${isMarking ? "marked" : "unmarked"} successfully!`,
         variant: "success",
-        description: isMarking ? 
-          "The shareholder's attendance has been recorded." : 
-          "The shareholder's attendance has been removed."
+        description: isMarking
+          ? "The shareholder's attendance has been recorded."
+          : "The shareholder's attendance has been removed.",
       });
 
       if (isMarking) {
@@ -236,10 +200,10 @@ const fetchData = async (type: "name" | "phone" | "shareid", query: string) => {
       }
     } catch (error) {
       console.error("Attendance Error:", error);
-      toast({ 
-        title: "Error updating attendance", 
+      toast({
+        title: "Error updating attendance",
         variant: "destructive",
-        description: "Please try again or contact support."
+        description: "Please try again or contact support.",
       });
     }
   };

@@ -113,8 +113,8 @@ const SearchPrint = () => {
         label="Search For Printing"
         placeholder="Enter ID, Name, or Phone"
         onSearch={handleSearch}
-        loading={loading} // pass loading
-        error={error} // pass error
+        loading={loading}
+        error={error}
       />
 
       {result.length > 0 && (
